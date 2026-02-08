@@ -168,5 +168,50 @@ def get_commodities() -> list[str]:
     return [row['commodity'] for row in rows]
 
 
+def load_sample_data() -> None:
+    """Load sample data for demo purposes."""
+    from datetime import timedelta
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM grain_prices")
+    count = cursor.fetchone()[0]
+    conn.close()
+
+    if count > 0:
+        return  # Data already exists
+
+    # Sample data based on real scrape from Legacy Cooperative - Rolla
+    commodities = [
+        ("Corn", 3.60, -0.70, "Feb-26"),
+        ("Corn", 3.77, -0.80, "Nov-26"),
+        ("Soybeans", 10.15, -1.00, "Feb-26"),
+        ("Soybeans", 10.04, -0.90, "Oct-26"),
+        ("Spring Wheat 14%Pro", 5.40, -0.30, "Feb-26"),
+        ("Spring Wheat 14%Pro", 5.38, -0.75, "Sep-26"),
+        ("Winter Wheat 12% Pro", 4.71, -0.60, "Feb-26"),
+        ("Canola", 20.01, 0.0, "Feb-26"),
+        ("Canola", 19.56, 0.0, "Sep-26"),
+    ]
+
+    # Create sample history over past 7 days
+    base_time = datetime.now()
+    for days_ago in range(7, -1, -1):
+        timestamp = base_time - timedelta(days=days_ago)
+        variation = (7 - days_ago) * 0.02  # Small price variation
+
+        for commodity, price, basis, delivery in commodities:
+            insert_price(
+                commodity=commodity,
+                cash_price=round(price + variation * (1 if days_ago % 2 == 0 else -1), 2),
+                basis=basis,
+                futures_change=None,
+                delivery_start=delivery,
+                delivery_end=delivery,
+                timestamp=timestamp
+            )
+
+
 # Initialize database on import
 init_db()
+load_sample_data()
